@@ -1,50 +1,244 @@
 <!doctype html>
 <html>
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-		<title>reveal.js</title>
+        <title>reveal.js</title>
 
-		<link rel="stylesheet" href="css/reset.css">
-		<link rel="stylesheet" href="css/reveal.css">
-		<link rel="stylesheet" href="css/theme/black.css">
+        <link rel="stylesheet" href="css/reset.css">
+        <link rel="stylesheet" href="css/reveal.css">
+        <link rel="stylesheet" href="css/theme/black.css">
 
-		<!-- Theme used for syntax highlighting of code -->
-		<link rel="stylesheet" href="lib/css/monokai.css">
+        <!-- Theme used for syntax highlighting of code -->
+        <link rel="stylesheet" href="lib/css/monokai.css">
 
-		<!-- Printing and PDF exports -->
-		<script>
-			var link = document.createElement( 'link' );
-			link.rel = 'stylesheet';
-			link.type = 'text/css';
-			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
-			document.getElementsByTagName( 'head' )[0].appendChild( link );
-		</script>
-	</head>
-	<body>
-		<div class="reveal">
-			<div class="slides">
-				<section>Slide 1</section>
-				<section>Slide 2</section>
-			</div>
-		</div>
+        <!-- Printing and PDF exports -->
+        <script>
+            var link = document.createElement( 'link' );
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+            document.getElementsByTagName( 'head' )[0].appendChild( link );
+        </script>
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section data-markdown>
+                  <textarea data-template>
+                    ## Value Objects
 
-		<script src="js/reveal.js"></script>
 
-		<script>
-			// More info about config & dependencies:
-			// - https://github.com/hakimel/reveal.js#configuration
-			// - https://github.com/hakimel/reveal.js#dependencies
-			Reveal.initialize({
-				hash: true,
-				dependencies: [
-					{ src: 'plugin/markdown/marked.js' },
-					{ src: 'plugin/markdown/markdown.js' },
-					{ src: 'plugin/highlight/highlight.js' },
-					{ src: 'plugin/notes/notes.js', async: true }
-				]
-			});
-		</script>
-	</body>
+                    A few pointers
+                  </textarea>
+                </section>
+
+                <section data-markdown>
+                  <textarea data-template>
+                    So what is a value object and why should I care Alyssa?
+
+
+                    <sub>
+                      <sub>
+                        <sub>
+                          <sub>
+                            (And why am I asking her these contrived questions?)
+                          </sub>
+                        </sub>
+                      </sub>
+                    </sub>
+                    <aside class="notes">
+                      I will answer that for you by making a completely
+                      baseless assertion. Or for the mathematically
+                      inclined out there, I leave the following as an
+                      exercise to the reader.
+                    </aside>
+                  </textarea>
+                </section>
+
+                <section data-markdown>
+                  <textarea data-template>
+                    ### Representation matters
+
+
+                    Modeling problems well is one of the the hardest, most important and probably worst-emphasized parts of programming
+
+                  </textarea>
+                </section>
+
+                <section>
+                    <pre>
+                    <code data-trim>
+                      # we wrote a date api because a non-contrived example
+                      # wouldn't fit on a single slide
+                      class DateResponse
+                        attr_reader :date, :time
+                        def initialize( json )
+                          @date = json['date'] ? Date.parse( json['date'] ) : nil
+                          @time = json['time'] ? Time.parse( json['time'] ) : nil
+                        end
+                      end
+                    </code>
+                    </pre>
+
+                  </textarea>
+                </section>
+                <section>
+                  <pre>
+                    <code data-trim>
+                    [-9] pry(main)> time = Time.now;
+                    [-8] pry(main)> DateResponse.new( { time: time } ) == DateResponse.new( { time: time } )
+                    ==> false
+                    </code>
+                  </pre>
+                </section>
+                <section>
+                  <pre>
+                    <code data-trim>
+                      class DateResponse
+                        def ==( other )
+                          mine   = self.date.to_datetime  + self.time.seconds_since_midnight.seconds
+                          theirs = other.date.to_datetime + other.time.seconds_since_midnight.seconds
+                          return mine == theirs
+                        end
+                      end
+                    </code>
+                  </pre>
+                </section>
+                <section>
+                  <pre>
+                    <code data-trim>
+                      class DateResponse
+                        include Comparable
+
+                        def <=>( other )
+                          mine   = self.date.to_datetime  + self.time.seconds_since_midnight.seconds
+                          theirs = other.date.to_datetime + other.time.seconds_since_midnight.seconds
+                          return mine <=> theirs
+                        end
+                      end
+                    </code>
+                  </pre>
+                </section>
+                <section>
+                  <pre >
+                    <code data-trim>
+                      class DateResponse < SimpleDelegator
+                        def initialize( json )
+                          # ...
+                          __setobj__( date.to_datetime + self.time.seconds_since_midnight.seconds )
+                        end
+                      end
+                    </code>
+                  </pre>
+                </section>
+                <section>
+                  <pre >
+                    <code data-trim>
+                      combined_response = DateResponse.new( some_json ) += DateResponse.new( other_json )
+                      combined_response.date # ...?
+                    </code>
+                  </pre>
+                </section>
+                <section>
+                  <pre >
+                    <code data-trim>
+                      class DateResponse
+                        def to_h
+                          { date: date, time: time }
+                        end
+
+                        def as_json
+                          self.to_h.as_json
+                        end
+                      end
+                    </code>
+                  </pre>
+                </section>
+                <section>
+                  <pre >
+                    <code data-trim>
+                      class DateResponse
+                        include Comparable
+
+                        attr_reader :date, :time
+
+                        def initialize( json )
+                          @date = json['date'] ? Date.parse( json['date'] ) : nil
+                          @time = json['time'] ? Time.parse( json['time'] ) : nil
+                          @time_not_present = time ? false : true
+                        end
+
+                        def <=>( other )
+                          mine   = self.date.to_datetime  + self.time.seconds_since_midnight.seconds
+                          theirs = other.date.to_datetime + other.time.seconds_since_midnight.seconds
+                          return mine <=> theirs
+                        end
+
+                        def to_h
+                          { date: date, time: time }
+                        end
+
+                        def as_json
+                          self.to_h.as_json
+                        end
+                      end
+                      </code>
+                  </pre>
+                </section>
+                <section>
+                  <pre>
+                    <code class="hljs" data-trim data-noescape>
+                      class DateResponse < Dry::Struct
+                          attribute? :date, Types::Params::Date
+                          attribute? :time, Types::Params::Time
+                      end
+
+                      module Types
+                        include Dry::Types() # because reasons
+                      end
+
+
+                      # . syntax highlighting breaks without a dot on the slide
+                      </code>
+                  </pre>
+                </section>
+                <section>
+                  <pre>
+                    <code class="hljs" data-trim data-noescape>
+                      class DateResponseBut🏳️‍🌈 < DateResponse
+                          attribute :jeans_on_jeans_is_not_a_crime, Types::Strict::True
+                          alias_method :uhaul, :date
+                      end
+
+                      DateResponseBut🏳️‍🌈.new( json ).uhaul
+                      </code>
+                  </pre>
+                </section>
+            </div>
+        </div>
+
+        <script src="js/reveal.js"></script>
+
+        <script>
+            // More info about config & dependencies:
+            // - https://github.com/hakimel/reveal.js#configuration
+            // - https://github.com/hakimel/reveal.js#dependencies
+            Reveal.initialize({
+                progress: false,
+                controls: false,
+                slideNumber: true,
+                hash: true,
+                width: "100%",
+                height: "100%",
+                dependencies: [
+                    { src: 'plugin/markdown/marked.js' },
+                    { src: 'plugin/markdown/markdown.js' },
+                    { src: 'plugin/highlight/highlight.js' },
+                    { src: 'plugin/notes/notes.js', async: true }
+                ]
+            });
+        </script>
+    </body>
 </html>
